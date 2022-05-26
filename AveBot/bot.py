@@ -28,9 +28,11 @@ class AveBot(Bot):
     self.prefix = self.config["prefix"]
     self.suppress = self.config["suppress"]
 
-    self.user_id = self.config["user_id"]
+    self.mirror_id = self.config["mirror_id"]
 
-    self.copy_user = None
+    self.mirror = None
+
+    self.cmd_queue = []
 
     super().__init__(
       command_prefix=when_mentioned_or(self.prefix),
@@ -50,12 +52,15 @@ class AveBot(Bot):
 
     @self.event
     async def on_ready():
+
       print("Bot ready")
-      @loop(minutes=5)
+
+      @loop(minutes=5, reconnect=True)
       async def update_user():
         if self.is_ready():
-          self.copy_user = await self.get_or_fetch_user(self.user_id)
+          self.mirror = await self.get_or_fetch_user(self.mirror_id)
           print("Updated!")
+
       update_user.start()
 
     self.start_time = datetime.now()
