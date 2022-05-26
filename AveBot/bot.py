@@ -99,6 +99,7 @@ class AveBot(Bot):
     return (f'{days}d, ' + fmt) if days else fmt
 
   async def get_prefix(self, message=None):
+    # TODO: allow for multiple prefixes
     return [self.prefix, f"<@{self.user.id}> ", f"<@!{self.user.id}> "]
 
   @property
