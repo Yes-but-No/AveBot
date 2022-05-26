@@ -5,6 +5,8 @@ from datetime import datetime
 from discord.ext.commands import Bot, when_mentioned_or
 from discord.ext.tasks import loop
 
+from discord import Status
+
 from .config import DEFAULT_CONFIG_DICT, ConfigManager
 from .cogs import cogs
 from .utils import handle_error
@@ -12,7 +14,7 @@ from .utils import handle_error
 import typing
 
 if typing.TYPE_CHECKING:
-  from discord import Colour, Message
+  from discord import Colour, Message, User
   from discord.ext.commands import Context, errors
   from .config import SetupConfigDict
 
@@ -34,6 +36,8 @@ class AveBot(Bot):
 
     self.cmd_queue = []
 
+    self.run_cmd = False
+
     super().__init__(
       command_prefix=when_mentioned_or(self.prefix),
       help_command=None,
@@ -45,30 +49,67 @@ class AveBot(Bot):
     for cog in cogs:
       print(cog)
       self.add_cog(cog(self))
+    
+  @property
+  def run_cmd(self):
+    return self.mirror and self.mirror.status == Status.online
 
+  async def update_mirror(self, user: User):
+    mutual_guilds = user.mutual_guilds
+    # The mutual guild may not be loaded and results in no mutual guilds.
+    # In this case, we simply wait till we can see
+    if not mutual_guilds:
+      # Found one or more mutual guilds, so we just take the first one
+      guild = mutual_guilds[0]
+      self.mirror = await guild.fetch_member(user.id) # Need to do an API call to get the activity and status
+      status = self.mirror.status
 
+      if isinstance(status, str):
+        # Not sure when the status will be a string, but just assume it's online
+        status = Status.online
+      elif status == Status.offline:
+        status = Status.invisible
+
+      activity = self.mirror.activity # Try to copy the activity, might not work
+      self.change_presence(activity=activity, status=status)
+      print("Update success")
+    
+
+  @loop(minutes=1, reconnect=True)
+  async def update_loop(self):
+    if self.is_ready():
+      user = await self.get_or_fetch_user(self.mirror_id)
+      await self.update_mirror(user)
+
+  @loop(seconds=0.1, reconnect=True)
+  async def run_queue(self):
+    if self.is_ready():
+      if self.cmd_queue and self.run_cmd:
+        await self.invoke(self.cmd_queue.pop(0))
 
   def run(self, *args, **kwargs):
 
     @self.event
     async def on_ready():
-
       print("Bot ready")
 
-      @loop(minutes=5, reconnect=True)
-      async def update_user():
-        if self.is_ready():
-          self.mirror = await self.get_or_fetch_user(self.mirror_id)
-          print("Updated!")
-
-      update_user.start()
+      self.update_loop.start()
+      self.run_queue.start()
 
     self.start_time = datetime.now()
     super().run(self.token, *args, **kwargs)
 
+  async def process_commands(self, message):
+    if message.author.bot:
+      return
+    
+    ctx = await self.get_context(message)
+    if ctx.valid:
+      self.cmd_queue.append(ctx)
+
   async def on_message(self, message: Message):
     print(message.content)
-    await super().on_message(message)
+    await self.process_commands(message)
 
   async def on_command_error(self, ctx: Context, error: errors.CommandError):
     """|coro|
