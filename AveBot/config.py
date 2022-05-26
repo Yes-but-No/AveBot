@@ -28,7 +28,7 @@ class SetupConfigDict(typing.TypedDict):
   """Configurations needed to specified to run the bot"""
   prefix: str
   token: str
-  user_id: str
+  mirror_id: str
   suppress: bool
   case_insensitive: bool
   enable_eval: bool

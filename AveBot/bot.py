@@ -36,12 +36,10 @@ class AveBot(Bot):
 
     self.cmd_queue = []
 
-    self.run_cmd = False
-
     super().__init__(
-      command_prefix=when_mentioned_or(self.prefix),
       help_command=None,
       case_insensitive=self.config['case_insensitive'],
+      intents=self.config["intents"],
       *args,
       **kwargs
     )
@@ -56,26 +54,40 @@ class AveBot(Bot):
 
   async def update_mirror(self, user: User):
     mutual_guilds = user.mutual_guilds
+    print("mutual guilds", mutual_guilds)
     # The mutual guild may not be loaded and results in no mutual guilds.
-    # In this case, we simply wait till we can see
-    if not mutual_guilds:
+    # In this case, we must search manually
+    if mutual_guilds:
       # Found one or more mutual guilds, so we just take the first one
       guild = mutual_guilds[0]
       self.mirror = await guild.fetch_member(user.id) # Need to do an API call to get the activity and status
-      status = self.mirror.status
+    else:
+      for guild in self.guilds:
+        member = await guild.fetch_member(user.id)
+        if member: # ladies and gentlemen, we got 'em
+          self.mirror = member
+          break
+      else:
+        return # still can't find it, so we wait
 
-      if isinstance(status, str):
-        # Not sure when the status will be a string, but just assume it's online
-        status = Status.online
-      elif status == Status.offline:
-        status = Status.invisible
+    # TODO: currently bot keeps thinking mirror is offline, need to investigate this
+    status = self.mirror.status
+    print(self.mirror)
+    print(status)
 
-      activity = self.mirror.activity # Try to copy the activity, might not work
-      self.change_presence(activity=activity, status=status)
-      print("Update success")
+    if isinstance(status, str):
+      # Not sure when the status will be a string, but just assume it's online
+      status = Status.online
+    elif status == Status.offline:
+      status = Status.invisible
+
+    activity = self.mirror.activity # Try to copy the activity, might not work
+    await self.change_presence(activity=activity, status=status)
+    print("Update success")
+    
     
 
-  @loop(minutes=1, reconnect=True)
+  @loop(seconds=10, reconnect=True)
   async def update_loop(self):
     if self.is_ready():
       user = await self.get_or_fetch_user(self.mirror_id)
@@ -104,6 +116,7 @@ class AveBot(Bot):
       return
     
     ctx = await self.get_context(message)
+    print(ctx)
     if ctx.valid:
       self.cmd_queue.append(ctx)
 
@@ -128,6 +141,9 @@ class AveBot(Bot):
       return
 
     await handle_error(self, ctx, error)
+
+  async def get_prefix(self, message=None):
+    return [self.prefix, f"<@{self.user.id}> ", f"<@!{self.user.id}> "]
 
   @property
   def uptime(self) -> str:
