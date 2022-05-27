@@ -60,17 +60,16 @@ class AveBot(Bot):
     if mutual_guilds:
       # Found one or more mutual guilds, so we just take the first one
       guild = mutual_guilds[0]
-      self.mirror = await guild.fetch_member(user.id) # Need to do an API call to get the activity and status
+      self.mirror = guild.get_member(user.id) # Apparently we need to use get_member and not fetch_member so
     else:
       for guild in self.guilds:
-        member = await guild.fetch_member(user.id)
+        member = guild.get_member(user.id)
         if member: # ladies and gentlemen, we got 'em
           self.mirror = member
           break
       else:
         return # still can't find it, so we wait
 
-    # TODO: currently bot keeps thinking mirror is offline, need to investigate this
     status = self.mirror.status
     print(self.mirror)
     print(status)
@@ -82,6 +81,7 @@ class AveBot(Bot):
       status = Status.invisible
 
     activity = self.mirror.activity # Try to copy the activity, might not work
+    print(activity)
     await self.change_presence(activity=activity, status=status)
     print("Update success")
     
