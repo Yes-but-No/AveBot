@@ -5,7 +5,7 @@ from datetime import datetime
 from discord.ext.commands import Bot, when_mentioned_or
 from discord.ext.tasks import loop
 
-from discord import Status
+from discord import Status, Spotify, Game, Streaming, Activity, ActivityType
 
 from .config import DEFAULT_CONFIG_DICT, ConfigManager
 from .cogs import cogs
@@ -35,6 +35,7 @@ class AveBot(Bot):
     self.mirror = None
 
     self.cmd_queue = []
+    self.queue_cmds = False
 
     super().__init__(
       help_command=None,
@@ -54,7 +55,6 @@ class AveBot(Bot):
 
   async def update_mirror(self, user: User):
     mutual_guilds = user.mutual_guilds
-    print("mutual guilds", mutual_guilds)
     # The mutual guild may not be loaded and results in no mutual guilds.
     # In this case, we must search manually
     if mutual_guilds:
@@ -71,8 +71,10 @@ class AveBot(Bot):
         return # still can't find it, so we wait
 
     status = self.mirror.status
-    print(self.mirror)
-    print(status)
+    print("\nUpdating", self.mirror)
+    print("Status:",status)
+
+    self.queue_cmds = status != Status.dnd
 
     if isinstance(status, str):
       # Not sure when the status will be a string, but just assume it's online
@@ -80,12 +82,48 @@ class AveBot(Bot):
     elif status == Status.offline:
       status = Status.invisible
 
-    activity = self.mirror.activity # Try to copy the activity, might not work
-    print(activity)
+    activities = self.mirror.activities
+    print("Activities:",activities)
+
+    activity = None
+
+    if activities:
+      for act in activities:
+        if act.type == ActivityType.custom:
+          continue
+        elif isinstance(act, Spotify):
+          activity = Activity(
+            type=ActivityType.listening,
+            name=act.name,
+            url=act.track_url
+          )
+        elif activity.type == ActivityType.playing:
+          activity = Game(
+            act.name,
+            url=act.url
+          )
+        elif activity.type == ActivityType.streaming:
+          activity = Streaming(
+            name=act.name,
+            url=act.url
+          )
+        else:
+          activity = Activity(
+            type=act.type,
+            name=act.name,
+            url=act.url
+          )
+
+    if activity is None:
+      activity = Activity(
+        type=ActivityType.watching,
+        name=self.mirror.display_name
+      )
+
+    print("Setting activity:", activity)
+
     await self.change_presence(activity=activity, status=status)
-    print("Update success")
-    
-    
+    print("Update success\n")
 
   @loop(seconds=10, reconnect=True)
   async def update_loop(self):
@@ -116,12 +154,11 @@ class AveBot(Bot):
       return
     
     ctx = await self.get_context(message)
-    print(ctx)
-    if ctx.valid:
+    if ctx.valid and self.queue_cmds:
       self.cmd_queue.append(ctx)
 
   async def on_message(self, message: Message):
-    print(message.content)
+    print(f"{message.author}: {message.content}")
     await self.process_commands(message)
 
   async def on_command_error(self, ctx: Context, error: errors.CommandError):
