@@ -9,17 +9,17 @@ from discord import Colour, Intents
 def get_setup_from_env() -> SetupConfigDict:
   """
   Gets all the setup parameters for the bot from env,
-  all variables must be uppercase and prefixed with `YBN_`
+  all variables must be uppercase and prefixed with `AVE_`
 
   Booleans can be specified with a number, `0` being `False` and `1` being `True`
   """
   setup_config: SetupConfigDict = {}
   for key in os.environ.keys():
-    if key.startswith('YBN_'):
+    if key.startswith('AVE_'):
       item = os.environ.get(key)
       if item.isdigit():
         item = not not int(item) # faster I think?
-      setup_config[key.removeprefix('YBN_').lower()] = item
+      setup_config[key.removeprefix('AVE_').lower()] = item
   return setup_config
 
 def get_setup_from_json(filename: str) -> SetupConfigDict:
