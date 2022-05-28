@@ -133,7 +133,8 @@ class AveBot(Bot):
   async def update_loop(self):
     if self.is_ready():
       user = await self.get_or_fetch_user(self.mirror_id)
-      await self.update_mirror(user)
+      if user: # If user is found
+        await self.update_mirror(user)
 
   @loop(seconds=0.1, reconnect=True)
   async def run_queue(self):
