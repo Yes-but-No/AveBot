@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from discord.ext.commands import Bot, when_mentioned_or
+from discord.ext.commands import Bot
 from discord.ext.tasks import loop
 
 from discord import Status, Spotify, Game, Streaming, Activity, ActivityType
