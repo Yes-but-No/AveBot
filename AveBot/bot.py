@@ -131,18 +131,18 @@ class AveBot(Bot):
 
   @loop(seconds=10, reconnect=True)
   async def update_loop(self):
-    if self.is_ready():
-      user = await self.get_or_fetch_user(self.mirror_id)
-      if user: # If user is found
-        await self.update_mirror(user)
-      else:
-        print("User was not found, retrying...")
+    await self.wait_until_ready():
+    user = await self.get_or_fetch_user(self.mirror_id)
+    if user: # If user is found
+      await self.update_mirror(user)
+    else:
+      print("User was not found, retrying...")
 
   @loop(seconds=0.1, reconnect=True)
   async def run_queue(self):
-    if self.is_ready():
-      if self.cmd_queue and self.run_cmd:
-        await self.invoke(self.cmd_queue.pop(0))
+    await self.wait_until_ready()
+    if self.cmd_queue and self.run_cmd:
+      await self.invoke(self.cmd_queue.pop(0))
 
   def run(self, *args, **kwargs):
 
