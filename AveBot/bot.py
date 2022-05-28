@@ -135,6 +135,8 @@ class AveBot(Bot):
       user = await self.get_or_fetch_user(self.mirror_id)
       if user: # If user is found
         await self.update_mirror(user)
+      else:
+        print("User was not found, retrying...")
 
   @loop(seconds=0.1, reconnect=True)
   async def run_queue(self):
