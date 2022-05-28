@@ -27,7 +27,11 @@ class AveBot(Bot):
     config_dict = kwargs.pop('config', DEFAULT_CONFIG_DICT)
     self.config = ConfigManager(setup_config=setup_config, config_dict=config_dict)
     self.token = self.config["token"]
+
     self.prefix = self.config["prefix"]
+    if self.prefix.isalpha():
+      self.prefix += " "
+
     self.suppress = self.config["suppress"]
 
     self.mirror_id = self.config["mirror_id"]
