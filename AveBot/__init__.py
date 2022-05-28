@@ -3,7 +3,7 @@ __author__ = "YBN Development Team"
 __version__ = "0.0.1a1"
 
 from .bot import AveBot
-from .config import get_setup_from_json
+from .config import get_setup_from_env, get_setup_from_json
 
 from typing import NamedTuple, Literal
 
