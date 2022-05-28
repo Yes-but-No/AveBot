@@ -36,6 +36,11 @@ class AveBot(Bot):
 
     self.mirror_id = self.config["mirror_id"]
 
+    print("Setting up...")
+    print("Prefix:", self.prefix)
+    print("Suppress:", self.suppress)
+    print("Mirroring:", self.mirror_id)
+
     self.mirror = None
 
     self.cmd_queue = []
