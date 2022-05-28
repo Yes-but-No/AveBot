@@ -17,7 +17,7 @@ def get_setup_from_env() -> SetupConfigDict:
   for key in os.environ.keys():
     if key.startswith('AVE_'):
       item = os.environ.get(key)
-      if item.isdigit():
+      if item.isdigit() and len(item) == 1:
         item = not not int(item) # faster I think?
       setup_config[key.removeprefix('AVE_').lower()] = item
   return setup_config
