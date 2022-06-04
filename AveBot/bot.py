@@ -14,7 +14,7 @@ from .utils import handle_error
 import typing
 
 if typing.TYPE_CHECKING:
-  from discord import Colour, Message, User
+  from discord import Colour, Message, Member
   from discord.ext.commands import Context, errors
   from .config import SetupConfigDict
 
@@ -34,7 +34,7 @@ class AveBot(Bot):
 
     self.suppress = self.config["suppress"]
 
-    self.mirror_id = self.config["mirror_id"]
+    self.mirror_id = int(self.config["mirror_id"])
 
     print("Setting up...")
     print("Prefix:", self.prefix)
@@ -62,7 +62,20 @@ class AveBot(Bot):
   def run_cmd(self):
     return self.mirror and self.mirror.status == Status.online
 
-  async def update_mirror(self, user: User):
+  async def on_presence_update(self, _: Member, after: Member):
+    if after.id == self.mirror_id:
+      self.mirror = after
+
+  async def on_ready(self):
+    print("Update success\n")
+    await self.update_mirror() # Get initial mirror info
+    self.run_queue.start()
+    self.update_loop.start()
+
+  async def update_mirror(self):
+    """Forcefully update the mirror"""
+    print("Forcefully updating mirror...")
+    user = await self.get_or_fetch_user(self.mirror_id)
     mutual_guilds = user.mutual_guilds
     # The mutual guild may not be loaded and results in no mutual guilds.
     # In this case, we must search manually
@@ -79,9 +92,10 @@ class AveBot(Bot):
       else:
         return # still can't find it, so we wait
 
+  async def update_reflection(self):
     status = self.mirror.status
     print("\nUpdating", self.mirror)
-    print("Status:",status)
+    print("Status:", status)
 
     self.queue_cmds = status != Status.dnd
 
@@ -92,13 +106,13 @@ class AveBot(Bot):
       status = Status.invisible
 
     activities = self.mirror.activities
-    print("Activities:",activities)
+    print("Activities:", activities)
 
     activity = None
 
     if activities:
       for act in activities:
-        if act.type == ActivityType.custom:
+        if act is None or act.type == ActivityType.custom:
           continue
         elif isinstance(act, Spotify):
           activity = Activity(
@@ -123,25 +137,17 @@ class AveBot(Bot):
             url=act.url
           )
 
-    if activity is None:
+    if activity is None and status != Status.invisible:
       activity = Activity(
         type=ActivityType.watching,
-        name=self.mirror.display_name
+        name=self.mirror.name
       )
 
     print("Setting activity:", activity)
+    print("Setting status:", status)
 
     await self.change_presence(activity=activity, status=status)
     print("Update success\n")
-
-  @loop(seconds=10, reconnect=True)
-  async def update_loop(self):
-    await self.wait_until_ready()
-    user = await self.get_or_fetch_user(self.mirror_id)
-    if user: # If user is found
-      await self.update_mirror(user)
-    else:
-      print("User was not found, retrying...")
 
   @loop(seconds=0.1, reconnect=True)
   async def run_queue(self):
@@ -149,14 +155,13 @@ class AveBot(Bot):
     if self.cmd_queue and self.run_cmd:
       await self.invoke(self.cmd_queue.pop(0))
 
+  @loop(seconds=10, reconnect=True)
+  async def update_loop(self):
+    await self.wait_until_ready()
+    if self.mirror is not None:
+      await self.update_reflection()
+
   def run(self, *args, **kwargs):
-
-    @self.event
-    async def on_ready():
-      print("Bot ready")
-
-      self.update_loop.start()
-      self.run_queue.start()
 
     self.start_time = datetime.now()
     super().run(self.token, *args, **kwargs)
