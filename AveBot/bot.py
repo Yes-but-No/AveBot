@@ -65,6 +65,7 @@ class AveBot(Bot):
   async def on_presence_update(self, _: Member, after: Member):
     if after.id == self.mirror_id:
       self.mirror = after
+      await self.update_reflection()
 
   async def on_ready(self):
     print("Update success\n")
@@ -155,7 +156,7 @@ class AveBot(Bot):
     if self.cmd_queue and self.run_cmd:
       await self.invoke(self.cmd_queue.pop(0))
 
-  @loop(seconds=10, reconnect=True)
+  @loop(seconds=30, reconnect=True)
   async def update_loop(self):
     await self.wait_until_ready()
     if self.mirror is not None:
