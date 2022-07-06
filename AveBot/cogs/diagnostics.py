@@ -22,3 +22,8 @@ class Diagnostics(Cog):
     time = (time.microseconds/1000 + self.bot.latency*1000)
     embed = embed_template(self.bot, ctx.author, title='Pong! \U0001F3D3', description=f'{round(time,1)}ms')
     await ctx.reply(embed=embed)
+
+  @command(help="Get the uptime of the bot")
+  async def uptime(self, ctx: Context):
+    uptime = self.bot.uptime
+    embed = embed_template(self.bot, ctx.author, title="Bot uptime", description=uptime)
