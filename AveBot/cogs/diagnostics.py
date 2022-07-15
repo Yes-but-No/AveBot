@@ -27,3 +27,4 @@ class Diagnostics(Cog):
   async def uptime(self, ctx: Context):
     uptime = self.bot.uptime
     embed = embed_template(self.bot, ctx.author, title="Bot uptime", description=uptime)
+    await ctx.reply(embed=embed)
