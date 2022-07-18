@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from datetime import datetime
 
+from math import floor
+
 from discord.ext.commands import Bot
 from discord.ext.tasks import loop
 
@@ -203,8 +205,8 @@ class AveBot(Bot):
   @property
   def uptime(self) -> str:
     """Get the uptime of the bot"""
-    timediff = datetime.now() - self.start_time
-    hours, remainder = divmod(timediff.total_seconds(), 3600)
+    timediff = floor((datetime.now() - self.start_time).total_seconds())
+    hours, remainder = divmod(timediff, 3600)
     minutes, seconds = divmod(remainder, 60)
     days, hours = divmod(hours, 24)
     fmt = f'{hours}h, {minutes}m and {seconds}s'
